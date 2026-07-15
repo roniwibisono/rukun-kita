@@ -53,12 +53,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           context.go(AppRoutes.adminHome);
       }
     } on AuthException catch (e) {
-      setState(() => _errorMessage = e.message);
+      setState(() => _errorMessage = _friendlyLoginError(e.message));
     } catch (e) {
-      setState(() => _errorMessage = 'Terjadi kesalahan. Coba lagi.');
+      setState(() => _errorMessage = _friendlyLoginError('$e'));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _friendlyLoginError(String error) {
+    final normalized = error.toLowerCase();
+    if (normalized.contains('failed host lookup') ||
+        normalized.contains('clientexception') ||
+        normalized.contains('socketexception') ||
+        normalized.contains('no address associated with hostname') ||
+        normalized.contains('connection failed') ||
+        normalized.contains('network is unreachable')) {
+      return 'Tidak bisa menemukan server Rukun Kita. Periksa koneksi internet, matikan VPN/Private DNS jika aktif, lalu coba lagi.';
+    }
+    if (normalized.contains('invalid login credentials')) {
+      return 'Username/email atau kode akses tidak sesuai.';
+    }
+    if (normalized.contains('timeout') || normalized.contains('timed out')) {
+      return 'Koneksi ke server terlalu lama. Coba lagi beberapa saat.';
+    }
+    return 'Login gagal. Periksa data masuk atau coba lagi.';
   }
 
   @override
@@ -115,9 +134,33 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 12),
-                      Text(
-                        _errorMessage!,
-                        style: const TextStyle(color: Colors.red),
+                      Card(
+                        color: Theme.of(context).colorScheme.errorContainer,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onErrorContainer,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onErrorContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                     const SizedBox(height: 24),
